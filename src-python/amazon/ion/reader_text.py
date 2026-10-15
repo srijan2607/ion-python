@@ -86,7 +86,7 @@ _ENCODING = 'utf-8'
 # between how bytes objects are handled in python 2 and 3, and simplifies logic around comparing multi-byte characters.
 _WHITESPACE_NOT_NL = _seq(b' \t\v\f')
 _WHITESPACE = _WHITESPACE_NOT_NL + _seq(b'\n\r')
-_VALUE_TERMINATORS = _seq(b'{}[](),\"\' \t\n\r/')
+_VALUE_TERMINATORS = _WHITESPACE + _seq(b'{}[](),\"\'/')
 _SYMBOL_TOKEN_TERMINATORS = _WHITESPACE + _seq(b'/:')
 _DIGITS = _seq(b'0123456789')
 _BINARY_RADIX = _seq(b'Bb')
