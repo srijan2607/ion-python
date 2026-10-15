@@ -107,6 +107,15 @@ _BASIC_PARAMS = (
 )
 
 _BAD_VALUES = (
+    (b'\x31\x00', 'NEGATIVE ZERO - ONE BYTE'),
+    (b'\x32\x00\x00', 'NEGATIVE ZERO - TWO BYTES'),
+    (b'\x34' + b'\x00' * 4, 'NEGATIVE ZERO - FOUR BYTES'),
+    (b'\x38' + b'\x00' * 8, 'NEGATIVE ZERO - EIGHT BYTES'),
+    (b'\x39' + b'\x00' * 9, 'NEGATIVE ZERO - NINE BYTES'),
+    (b'\x3D' + b'\x00' * 13, 'NEGATIVE ZERO - THIRTEEN BYTES'),
+    (b'\x3E\x8E' + b'\x00' * 14, 'NEGATIVE ZERO - FOURTEEN BYTES'),
+    (b'\x3E\x90' + b'\x00' * 16, 'NEGATIVE ZERO - SIXTEEN BYTES'),
+    (b'\x3E\x80', 'NEGATIVE ZERO - EMPTY VARIABLE LENGTH'),
     # The annotation wrapper declares 6 octets, but the wrapped value (a symbol value) ends after only 4.
     (b'\xe6\x81\x84\x71\x04\x71\x04', 'ANNOT LENGTH TOO LONG - SCALAR'),
     # The annotation wrapper declares 6 octets, but the wrapped value (a list) ends after only 4.

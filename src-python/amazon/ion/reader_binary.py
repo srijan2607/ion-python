@@ -515,6 +515,8 @@ def _int_factory(sign, data):
         if length == 1:
             value <<= 8
             value |= data[-length]
+        if sign < 0 and value == 0:
+            raise IonException('Negative zero is not a valid integer.')
         return sign * value
     return parse_int
 
