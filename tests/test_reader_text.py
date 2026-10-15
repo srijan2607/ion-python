@@ -15,6 +15,8 @@
 from decimal import Decimal
 from itertools import chain
 
+from pytest import mark
+
 from amazon.ion.core import timestamp, TimestampPrecision
 from amazon.ion.exceptions import IonException
 from amazon.ion.reader import ReadEventType
@@ -1272,3 +1274,86 @@ _good_unicode_params = partial(_basic_params, _end, 'GOOD - UNICODE', u'')
 ))
 def test_raw_reader(p):
     reader_scaffold(reader(is_unicode=p.is_unicode), p.event_pairs)
+
+
+_WHITESPACE_VALUES = (
+    (b'0', e_int(0)),
+    (b'-0', e_int(0)),
+    (b'123', e_int(123)),
+    (b'-12', e_int(-12)),
+    (b'1_000', e_int(1000)),
+    (b'0b10', e_int(2)),
+    (b'-0xF', e_int(-15)),
+    (b'1.', e_decimal(_d('1.'))),
+    (b'1.25', e_decimal(_d('1.25'))),
+    (b'1d-2', e_decimal(_d('0.01'))),
+    (b'1e2', e_float(100.)),
+    (b'1.25e-2', e_float(0.0125)),
+    (b'2000T', e_timestamp(_ts(2000, precision=_tp.YEAR))),
+    (b'2000-01T', e_timestamp(_ts(2000, 1, precision=_tp.MONTH))),
+    (b'2000-01-02', e_timestamp(_ts(2000, 1, 2, precision=_tp.DAY))),
+    (b'2000-01-02T03:04Z', e_timestamp(_ts(2000, 1, 2, 3, 4, off_hours=0, precision=_tp.MINUTE))),
+    (b'2000-01-02T03:04:05.6+01:30',
+     e_timestamp(_ts(2000, 1, 2, 3, 4, 5, off_hours=1, off_minutes=30, fractional_seconds=_d('.6')))),
+    (b'true', e_bool(True)),
+    (b'null.int', e_int(None)),
+    (b'+inf', e_float(_POS_INF)),
+)
+
+
+@mark.parametrize('data, expected', _WHITESPACE_VALUES)
+@mark.parametrize('separator', (b' ', b'\t', b'\n', b'\r', b'\v', b'\f'))
+@mark.parametrize('is_unicode', (False, True))
+@mark.parametrize('split', (False, True))
+def test_whitespace_value_boundary(data, expected, separator, is_unicode, split):
+    def read(data):
+        return e_read(data.decode('ascii') if is_unicode else data)
+
+    pairs = [(NEXT, END)]
+    if split:
+        # The separator must terminate the buffered token even when delivered alone.
+        pairs += [(read(data), INC), (read(separator), expected), (NEXT, END),
+                  (read(b'0 '), e_int(0))]
+    else:
+        pairs += [(read(data + separator + b'0 '), expected), (NEXT, e_int(0))]
+    pairs += [(NEXT, END)]
+    reader_scaffold(reader(is_unicode=is_unicode), pairs)
+
+
+@mark.parametrize('data', (b'1_', b'0x', b'0b', b'1e', b'1e+', b'1d-',
+                          b'2000-', b'2000-01-02T03:', b'2000-01-02T03:04:'))
+@mark.parametrize('separator', (b'\v', b'\f'))
+@mark.parametrize('is_unicode', (False, True))
+def test_whitespace_does_not_complete_invalid_token(data, separator, is_unicode):
+    data += separator
+    if is_unicode:
+        data = data.decode('ascii')
+    reader_scaffold(reader(is_unicode=is_unicode), [(NEXT, END), (e_read(data), IonException)])
+
+
+@mark.parametrize('template, events', (
+    (b'(%s1%sa)', (e_start_sexp(), e_int(1), e_symbol(_st('a')), e_end_sexp())),
+    (b'[%s1%s,a]', (e_start_list(), e_int(1), e_symbol(_st('a')), e_end_list())),
+    (b'{%sx:1%s,y:a}', (e_start_struct(), e_int(1, field_name=_st('x')),
+                         e_symbol(_st('a'), field_name=_st('y')), e_end_struct())),
+    (b'foo::%s1%s', (e_int(1, annotations=(_st('foo'),)),)),
+))
+@mark.parametrize('separator', (b' ', b'\t', b'\n', b'\r', b'\v', b'\f'))
+@mark.parametrize('is_unicode', (False, True))
+def test_whitespace_in_containers_and_annotations(template, events, separator, is_unicode):
+    data = template % (separator, separator)
+    if is_unicode:
+        data = data.decode('ascii')
+    pairs = [(NEXT, END), (e_read(data), events[0])]
+    pairs += [(NEXT, event) for event in events[1:]]
+    pairs += [(NEXT, END)]
+    reader_scaffold(reader(is_unicode=is_unicode), pairs)
+
+
+@mark.parametrize('separator', ('\x00', '\x08', '\x1c', '\x85', '\xa0', '\u2003', '\u2028'))
+@mark.parametrize('is_unicode', (False, True))
+def test_non_ion_whitespace_is_not_a_numeric_boundary(separator, is_unicode):
+    data = '1' + separator + '0 '
+    if not is_unicode:
+        data = data.encode('utf-8')
+    reader_scaffold(reader(is_unicode=is_unicode), [(NEXT, END), (e_read(data), IonException)])
