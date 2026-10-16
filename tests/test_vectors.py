@@ -96,7 +96,6 @@ _SKIP_LIST = (
     # TEXT:
     _good_file(u'subfieldVarUInt.ion'),  # TODO amazon-ion/ion-python#34
     _good_file(u'subfieldVarUInt32bit.ion'),  # TODO amazon-ion/ion-python#34
-    _good_file(u'whitespace.ion'),  # TODO amazon-ion/ion-python#117
     _good_file(u'symbols.ion'),  # TODO amazon-ion/ion-python#122
     _bad_file(u'localSymbolTableWithMultipleImportsFields.ion'),  # TODO amazon-ion/ion-python#118
     _bad_file(u'localSymbolTableWithMultipleSymbolsAndImportsFields.ion'),  # TODO amazon-ion/ion-python#118
