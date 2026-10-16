@@ -119,7 +119,6 @@ _SKIP_LIST = (
 
 if c_ext:
     _SKIP_LIST += (
-        _good_file(u'whitespace.ion'),  # ion-c still has VT/FF token-boundary gaps; #117 fixes Python only.
         _good_file(u'subfieldVarInt.ion'),  # c_ext supports 300 decimal digits while here is a 8000+ decimal digits test..
     )
 
